@@ -7,8 +7,8 @@ Juego de sopa de letras de 15 x 15 hecho con Java Swing y tema oscuro FlatLaf. L
 - Palabras colocadas al azar en las **ocho direcciones** (horizontal, vertical y diagonales, en ambos sentidos).
 - Selección **arrastrando el ratón** en línea recta; las palabras halladas se marcan en verde.
 - Puntuación: 10 puntos por letra.
-- **Palabras personalizables:** el archivo `palabras.txt` (una por línea; `#` para comentarios) o el menú *Load Words*.
-- Si falta `palabras.txt`, se crea uno de ejemplo automáticamente.
+- **Palabras personalizables:** el archivo `src/main/resources/palabras.txt` (una por línea; `#` para comentarios), que va dentro del jar, o el menú *Load Words* para cargar otro archivo.
+- Si el recurso falta o no tiene palabras válidas, se usan diez palabras de ejemplo.
 - Atajos de teclado: Ctrl+N (nuevo juego), Ctrl+O (cargar palabras), F1 (ayuda) y Ctrl+Q (salir).
 
 ## Requisitos
@@ -30,7 +30,7 @@ mvn compile exec:java
 
 ## Notas
 
-- El archivo `palabras.txt` se lee desde la carpeta en la que se ejecuta el juego.
+- `palabras.txt` se lee del classpath (carpeta `resources`), así que el juego funciona igual desde cualquier carpeta y desde el fat jar. Para cambiar la lista por defecto edita ese archivo y vuelve a compilar; para una lista puntual usa el menú *Load Words*.
 - Las palabras más largas que la cuadrícula (15 letras) o que no consigan colocarse se descartan.
 
 ## Licencia

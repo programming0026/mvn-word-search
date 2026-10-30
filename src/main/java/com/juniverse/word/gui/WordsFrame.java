@@ -18,15 +18,17 @@ import static java.awt.event.InputEvent.BUTTON1_DOWN_MASK;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -63,7 +65,11 @@ public class WordsFrame extends JFrame {
 
     private static final int GRID_SIZE = 15;
     private static final int CELL_SIZE = 40;
-    private static final String WORDS_FILE = "palabras.txt";
+    /** Lista de palabras incluida en {@code src/main/resources}. */
+    private static final String WORDS_RESOURCE = "/palabras.txt";
+    /** Palabras que se usan si el recurso falta o no tiene ninguna válida. */
+    private static final List<String> DEFAULT_WORDS = List.of("JAVA", "SWING", "PROGRAMA", "CODIGO", "CLASE",
+            "OBJETO", "METODO", "VARIABLE", "INTERFAZ", "HERENCIA");
 
     private static final String FONT_ARIAL = "Arial";
     private static final String LABEL_SCORE = "Score: 0";
@@ -101,14 +107,17 @@ public class WordsFrame extends JFrame {
         setVisible(true);
     }
 
-    /** Lee {@code palabras.txt}; si no existe o está vacío usa diez palabras de ejemplo y crea el archivo. */
+    /** Lee {@code palabras.txt} de la carpeta {@code resources} (va dentro del jar); si falta o está vacío usa diez palabras de ejemplo. */
     private void initializeWords() {
-        try {
+        try (InputStream in = WordsFrame.class.getResourceAsStream(WORDS_RESOURCE)) {
+            if (in == null) {
+                throw new IOException("Resource not found: " + WORDS_RESOURCE);
+            }
 
-            List<String> lines = Files.readAllLines(Paths.get(WORDS_FILE), StandardCharsets.UTF_8);
+            List<String> lines = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8)).lines().toList();
 
             for (String line : lines) {
-                line = line.trim().toUpperCase().replaceAll("\\s+", ""); // sin espacios: se confundirían con celdas vacías
+                line = line.trim().toUpperCase().replaceAll("\s+", ""); // sin espacios: se confundirían con celdas vacías
 
                 if (!line.isEmpty() && !line.startsWith("#")) {
                     words.add(new WordDto(line));
@@ -119,56 +128,17 @@ public class WordsFrame extends JFrame {
                 throw new IOException("The file does not contain valid words");
             }
 
-            log.log(Level.INFO, "{0} words were loaded from " + WORDS_FILE, words.size());
+            log.log(Level.INFO, "{0} words were loaded from " + WORDS_RESOURCE, words.size());
 
         } catch (IOException e) {
 
-            log.log(Level.WARNING, "The file " + WORDS_FILE + " could not be read: {0}", e.getMessage());
+            log.log(Level.WARNING, "The resource " + WORDS_RESOURCE + " could not be read: {0}", e.getMessage());
             log.warning("Using default words...");
 
-            words.add(new WordDto("JAVA"));
-            words.add(new WordDto("SWING"));
-            words.add(new WordDto("PROGRAMA"));
-            words.add(new WordDto("CODIGO"));
-            words.add(new WordDto("CLASE"));
-            words.add(new WordDto("OBJETO"));
-            words.add(new WordDto("METODO"));
-            words.add(new WordDto("VARIABLE"));
-            words.add(new WordDto("INTERFAZ"));
-            words.add(new WordDto("HERENCIA"));
-
-            try {
-                createExampleFile();
-            } catch (IOException ex) {
-                log.log(Level.SEVERE, "Could not create sample file: {0}", ex.getMessage());
+            for (String word : DEFAULT_WORDS) {
+                words.add(new WordDto(word));
             }
         }
-    }
-
-    /**
-     * Crea {@code palabras.txt} con las palabras de ejemplo.
-     * @throws IOException si no se puede escribir
-     */
-    private void createExampleFile() throws IOException {
-        List<String> linesExample = Arrays.asList(
-                "# Archivo de palabras para Sopa de Letras",
-                "# Una palabra por línea",
-                "# Las líneas que empiezan con # son comentarios",
-                "",
-                "JAVA",
-                "SWING",
-                "PROGRAMA",
-                "CODIGO",
-                "CLASE",
-                "OBJETO",
-                "METODO",
-                "VARIABLE",
-                "INTERFAZ",
-                "HERENCIA"
-        );
-
-        Files.write(Paths.get(WORDS_FILE), linesExample, StandardCharsets.UTF_8);
-        log.info("A sample file was created: " + WORDS_FILE);
     }
 
     /** Generador de números aleatorios. */
