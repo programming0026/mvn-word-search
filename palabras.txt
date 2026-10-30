@@ -1,0 +1,14 @@
+# Archivo de palabras para Sopa de Letras
+# Una palabra por línea
+# Las líneas que empiezan con # son comentarios
+
+JAVA
+SWING
+PROGRAMA
+CODIGO
+CLASE
+OBJETO
+METODO
+VARIABLE
+INTERFAZ
+HERENCIA
