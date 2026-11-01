@@ -1,10 +1,9 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.juniverse.word.gui;
 
 import com.juniverse.word.dto.WordDto;
+import com.juniverse.word.model.LineSelection;
+import com.juniverse.word.model.WordListParser;
+import com.juniverse.word.model.WordSearchGrid;
 import com.juniverse.word.util.MessageUtil;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -74,7 +73,7 @@ public class WordsFrame extends JFrame {
     private static final String FONT_ARIAL = "Arial";
     private static final String LABEL_SCORE = "Score: 0";
 
-    private final char[][] grid;
+    private final WordSearchGrid grid;
     private final JButton[][] buttons;
     private List<WordDto> words;
     private List<Point> selection;
@@ -90,7 +89,7 @@ public class WordsFrame extends JFrame {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLayout(new BorderLayout(10, 10));
 
-        grid = new char[GRID_SIZE][GRID_SIZE];
+        grid = new WordSearchGrid(GRID_SIZE, new Random());
         buttons = new JButton[GRID_SIZE][GRID_SIZE];
         words = new ArrayList<>();
         selection = new ArrayList<>();
@@ -116,12 +115,8 @@ public class WordsFrame extends JFrame {
 
             List<String> lines = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8)).lines().toList();
 
-            for (String line : lines) {
-                line = line.trim().toUpperCase().replaceAll("\s+", ""); // sin espacios: se confundirían con celdas vacías
-
-                if (!line.isEmpty() && !line.startsWith("#")) {
-                    words.add(new WordDto(line));
-                }
+            for (String line : WordListParser.parse(lines)) {
+                words.add(new WordDto(line));
             }
 
             if (words.isEmpty()) {
@@ -141,46 +136,13 @@ public class WordsFrame extends JFrame {
         }
     }
 
-    /** Generador de números aleatorios. */
-    private Random getRandom() {
-        return new Random();
-    }
-
     /**
-     * Coloca cada palabra en un lugar y dirección aleatorios (hasta 1000 intentos) y rellena el resto con letras al azar.
-     * Descarta las palabras que no caben.
+     * Genera una sopa nueva con las palabras actuales y descarta las que no caben (si no, el juego no se podría ganar).
      */
     private void generateSoup() {
-
-        for (int i = 0; i < GRID_SIZE; i++) {
-            for (int j = 0; j < GRID_SIZE; j++) {
-                grid[i][j] = ' ';
-            }
-        }
-
-        Random random = getRandom();
-        for (WordDto word : words) {
-            word.posiciones = null; // posiciones de una partida anterior
-            boolean placed = false;
-            int attempts = 0;
-
-            while (!placed && attempts < 1000) {
-                int fila = random.nextInt(GRID_SIZE);
-                int col = random.nextInt(GRID_SIZE);
-                int direccion = random.nextInt(8);
-
-                if (canPlaceWord(word.texto, fila, col, direccion)) {
-                    placeWord(word, fila, col, direccion);
-                    placed = true;
-                }
-                attempts++;
-            }
-        }
-
-        // Las palabras que no se pudieron colocar se descartan: si no, el juego no se podría ganar nunca
-        List<WordDto> notPlaced = words.stream().filter(w -> w.posiciones == null).toList();
+        List<WordDto> notPlaced = grid.generate(words);
         for (WordDto w : notPlaced) {
-            log.log(Level.WARNING, "La palabra {0} no cabe en la cuadrícula y se descarta", w.texto);
+            log.log(Level.WARNING, "La palabra {0} no cabe en la cuadrícula y se descarta", w.text);
             if (w.label != null && wordsPanel != null) {
                 wordsPanel.remove(w.label);
             }
@@ -189,65 +151,6 @@ public class WordsFrame extends JFrame {
         if (wordsPanel != null) {
             wordsPanel.revalidate();
             wordsPanel.repaint();
-        }
-        for (int i = 0; i < GRID_SIZE; i++) {
-            for (int j = 0; j < GRID_SIZE; j++) {
-                if (grid[i][j] == ' ') {
-                    grid[i][j] = (char) ('A' + random.nextInt(26));
-                }
-            }
-        }
-    }
-
-    /**
-     * Comprueba si la palabra cabe desde una posición y dirección, sin chocar con letras distintas.
-     * @param word palabra
-     * @param row fila inicial
-     * @param column columna inicial
-     * @param address dirección (0-7, las ocho vecinas)
-     */
-    private boolean canPlaceWord(String word, int row, int column, int address) {
-        int[] df = {-1, -1, -1, 0, 0, 1, 1, 1};
-        int[] dc = {-1, 0, 1, -1, 1, -1, 0, 1};
-
-        int length = word.length();
-        int finalRow = row + df[address] * (length - 1);
-        int finalColumn = column + dc[address] * (length - 1);
-
-        if (finalRow < 0 || finalRow >= GRID_SIZE
-                || finalColumn < 0 || finalColumn >= GRID_SIZE) {
-            return false;
-        }
-
-        for (int i = 0; i < length; i++) {
-            int f = row + df[address] * i;
-            int c = column + dc[address] * i;
-
-            if (grid[f][c] != ' ' && grid[f][c] != word.charAt(i)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /**
-     * Escribe la palabra en la cuadrícula y guarda las celdas que ocupa.
-     * @param word palabra
-     * @param row fila inicial
-     * @param column columna inicial
-     * @param address dirección (0-7)
-     */
-    private void placeWord(WordDto word, int row, int column, int address) {
-        int[] df = {-1, -1, -1, 0, 0, 1, 1, 1};
-        int[] dc = {-1, 0, 1, -1, 1, -1, 0, 1};
-
-        word.posiciones = new ArrayList<>();
-
-        for (int i = 0; i < word.texto.length(); i++) {
-            int f = row + df[address] * i;
-            int c = column + dc[address] * i;
-            grid[f][c] = word.texto.charAt(i);
-            word.posiciones.add(new Point(f, c));
         }
     }
 
@@ -258,47 +161,47 @@ public class WordsFrame extends JFrame {
         JMenu menuGame = new JMenu("Game");
         menuGame.setMnemonic('J');
 
-        JMenuItem itemNuevoJuego = new JMenuItem("New Game");
-        itemNuevoJuego.setMnemonic('N');
-        itemNuevoJuego.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_N, InputEvent.CTRL_DOWN_MASK));
-        itemNuevoJuego.addActionListener(e -> newGame());
+        JMenuItem itemNewGame = new JMenuItem("New Game");
+        itemNewGame.setMnemonic('N');
+        itemNewGame.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_N, InputEvent.CTRL_DOWN_MASK));
+        itemNewGame.addActionListener(e -> newGame());
 
-        JMenuItem itemCargarPalabras = new JMenuItem("Load Words");
-        itemCargarPalabras.setMnemonic('C');
-        itemCargarPalabras.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, InputEvent.CTRL_DOWN_MASK));
-        itemCargarPalabras.addActionListener(e -> uploadCustomFile());
+        JMenuItem itemLoadWords = new JMenuItem("Load Words");
+        itemLoadWords.setMnemonic('C');
+        itemLoadWords.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, InputEvent.CTRL_DOWN_MASK));
+        itemLoadWords.addActionListener(e -> uploadCustomFile());
 
-        JMenuItem itemSalir = new JMenuItem("Exit");
-        itemSalir.setMnemonic('S');
-        itemSalir.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q, InputEvent.CTRL_DOWN_MASK));
-        itemSalir.addActionListener(e -> System.exit(0));
+        JMenuItem itemExit = new JMenuItem("Exit");
+        itemExit.setMnemonic('S');
+        itemExit.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q, InputEvent.CTRL_DOWN_MASK));
+        itemExit.addActionListener(e -> System.exit(0));
 
-        menuGame.add(itemNuevoJuego);
-        menuGame.add(itemCargarPalabras);
+        menuGame.add(itemNewGame);
+        menuGame.add(itemLoadWords);
         menuGame.addSeparator();
-        menuGame.add(itemSalir);
+        menuGame.add(itemExit);
 
         JMenu menuHelp = new JMenu("Help");
         menuHelp.setMnemonic('A');
 
-        JMenuItem itemInstrucciones = new JMenuItem("How to Play");
-        itemInstrucciones.setMnemonic('I');
-        itemInstrucciones.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F1, 0));
-        itemInstrucciones.addActionListener(e -> showInstructions());
+        JMenuItem itemInstructions = new JMenuItem("How to Play");
+        itemInstructions.setMnemonic('I');
+        itemInstructions.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F1, 0));
+        itemInstructions.addActionListener(e -> showInstructions());
 
-        JMenuItem itemAcercaDe = new JMenuItem("About");
-        itemAcercaDe.setMnemonic('A');
-        itemAcercaDe.addActionListener(e -> about());
+        JMenuItem itemAbout = new JMenuItem("About");
+        itemAbout.setMnemonic('A');
+        itemAbout.addActionListener(e -> about());
 
-        menuHelp.add(itemInstrucciones);
+        menuHelp.add(itemInstructions);
         menuHelp.addSeparator();
-        menuHelp.add(itemAcercaDe);
+        menuHelp.add(itemAbout);
 
         menuBar.add(menuGame);
         menuBar.add(menuHelp);
         setJMenuBar(menuBar);
 
-        JPanel panelSuperior = new JPanel(new BorderLayout());
+        JPanel topPanel = new JPanel(new BorderLayout());
         JLabel title = new JLabel("Word Search", SwingConstants.CENTER);
         title.setFont(new Font(FONT_ARIAL, Font.BOLD, 24));
         title.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -306,36 +209,36 @@ public class WordsFrame extends JFrame {
         lblPunctuation = new JLabel(LABEL_SCORE, SwingConstants.CENTER);
         lblPunctuation.setFont(new Font(FONT_ARIAL, Font.BOLD, 16));
 
-        panelSuperior.add(title, BorderLayout.NORTH);
-        panelSuperior.add(lblPunctuation, BorderLayout.CENTER);
+        topPanel.add(title, BorderLayout.NORTH);
+        topPanel.add(lblPunctuation, BorderLayout.CENTER);
 
-        JPanel panelGrilla = new JPanel(new GridLayout(GRID_SIZE, GRID_SIZE, 2, 2));
-        panelGrilla.setBackground(Color.DARK_GRAY);
-        panelGrilla.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        JPanel gridPanel = new JPanel(new GridLayout(GRID_SIZE, GRID_SIZE, 2, 2));
+        gridPanel.setBackground(Color.DARK_GRAY);
+        gridPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         for (int i = 0; i < GRID_SIZE; i++) {
             for (int j = 0; j < GRID_SIZE; j++) {
-                JButton boton = new JButton(String.valueOf(grid[i][j]));
-                boton.setFont(new Font(FONT_ARIAL, Font.BOLD, 18));
-                boton.setFocusPainted(false);
-                boton.setBackground(Color.WHITE);
-                boton.setForeground(Color.BLACK);
-                boton.setPreferredSize(new Dimension(CELL_SIZE, CELL_SIZE));
-                boton.setMargin(new Insets(0, 0, 0, 0));
+                JButton button = new JButton(String.valueOf(grid.get(i, j)));
+                button.setFont(new Font(FONT_ARIAL, Font.BOLD, 18));
+                button.setFocusPainted(false);
+                button.setBackground(Color.WHITE);
+                button.setForeground(Color.BLACK);
+                button.setPreferredSize(new Dimension(CELL_SIZE, CELL_SIZE));
+                button.setMargin(new Insets(0, 0, 0, 0));
 
-                final int fila = i;
+                final int row = i;
                 final int col = j;
 
-                boton.addMouseListener(new MouseAdapter() {
+                button.addMouseListener(new MouseAdapter() {
                     @Override
                     public void mousePressed(MouseEvent e) {
-                        startSelection(fila, col);
+                        startSelection(row, col);
                     }
 
                     @Override
                     public void mouseEntered(MouseEvent e) {
                         if ((e.getModifiersEx() & BUTTON1_DOWN_MASK) != 0) {
-                            continueSelection(fila, col);
+                            continueSelection(row, col);
                         }
                     }
 
@@ -345,34 +248,34 @@ public class WordsFrame extends JFrame {
                     }
                 });
 
-                buttons[i][j] = boton;
-                panelGrilla.add(boton);
+                buttons[i][j] = button;
+                gridPanel.add(button);
             }
         }
 
-        JPanel panelDerecho = new JPanel(new BorderLayout());
-        JLabel lblPalabras = new JLabel("Words to find:", SwingConstants.CENTER);
-        lblPalabras.setFont(new Font(FONT_ARIAL, Font.BOLD, 14));
-        lblPalabras.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        JPanel rightPanel = new JPanel(new BorderLayout());
+        JLabel lblWords = new JLabel("Words to find:", SwingConstants.CENTER);
+        lblWords.setFont(new Font(FONT_ARIAL, Font.BOLD, 14));
+        lblWords.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
         wordsPanel = new JPanel();
         wordsPanel.setLayout(new BoxLayout(wordsPanel, BoxLayout.Y_AXIS));
         wordsPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        for (WordDto palabra : words) {
-            JLabel lblPalabra = new JLabel(palabra.texto);
-            lblPalabra.setFont(new Font(FONT_ARIAL, Font.PLAIN, 14));
-            lblPalabra.setBorder(BorderFactory.createEmptyBorder(3, 3, 3, 3));
-            palabra.label = lblPalabra;
-            wordsPanel.add(lblPalabra);
+        for (WordDto word : words) {
+            JLabel lblWord = new JLabel(word.text);
+            lblWord.setFont(new Font(FONT_ARIAL, Font.PLAIN, 14));
+            lblWord.setBorder(BorderFactory.createEmptyBorder(3, 3, 3, 3));
+            word.label = lblWord;
+            wordsPanel.add(lblWord);
         }
 
-        panelDerecho.add(lblPalabras, BorderLayout.NORTH);
-        panelDerecho.add(wordsPanel, BorderLayout.CENTER);
+        rightPanel.add(lblWords, BorderLayout.NORTH);
+        rightPanel.add(wordsPanel, BorderLayout.CENTER);
 
-        add(panelSuperior, BorderLayout.NORTH);
-        add(panelGrilla, BorderLayout.CENTER);
-        add(panelDerecho, BorderLayout.EAST);
+        add(topPanel, BorderLayout.NORTH);
+        add(gridPanel, BorderLayout.CENTER);
+        add(rightPanel, BorderLayout.EAST);
     }
 
     /**
@@ -398,12 +301,12 @@ public class WordsFrame extends JFrame {
             return;
         }
 
-        if (!isValidSelection(startingPoint, new Point(row, column))) {
+        if (!LineSelection.isStraightLine(startingPoint, new Point(row, column))) {
             return;
         }
 
         clearVisualSelection();
-        selection = getPointsOnline(startingPoint, new Point(row, column));
+        selection = LineSelection.pointsBetween(startingPoint, new Point(row, column));
 
         for (Point p : selection) {
             buttons[p.x][p.y].setBackground(Color.YELLOW);
@@ -434,39 +337,9 @@ public class WordsFrame extends JFrame {
         startingPoint = null;
     }
 
-    /** Indica si dos celdas están en línea recta (horizontal, vertical o diagonal). */
-    private boolean isValidSelection(Point start, Point end) {
-        int difFila = Math.abs(end.x - start.x);
-        int difCol = Math.abs(end.y - start.y);
-
-        return difFila == 0 || difCol == 0 || difFila == difCol;
-    }
-
-    /** Celdas en línea recta entre dos puntos. */
-    private List<Point> getPointsOnline(Point start, Point end) {
-        List<Point> points = new ArrayList<>();
-
-        int rows = end.x - start.x;
-        int columns = end.y - start.y;
-        int steps = Math.max(Math.abs(rows), Math.abs(columns));
-
-        int stepFila = rows == 0 ? 0 : rows / Math.abs(rows);
-        int stepCol = columns == 0 ? 0 : columns / Math.abs(columns);
-
-        for (int i = 0; i <= steps; i++) {
-            points.add(new Point(start.x + stepFila * i, start.y + stepCol * i));
-        }
-
-        return points;
-    }
-
     /** Letras de la selección actual. */
     private String getSelectedWord() {
-        StringBuilder sb = new StringBuilder();
-        for (Point p : selection) {
-            sb.append(grid[p.x][p.y]);
-        }
-        return sb.toString();
+        return grid.lettersAt(selection);
     }
 
     /**
@@ -484,13 +357,7 @@ public class WordsFrame extends JFrame {
      * @return la palabra, o {@code null} si no coincide con ninguna pendiente
      */
     private WordDto findWord(String word) {
-        String reversed = new StringBuilder(word).reverse().toString();
-        for (WordDto w : words) {
-            if (!wordsFound.contains(w.texto) && (w.texto.equals(word) || w.texto.equals(reversed))) {
-                return w;
-            }
-        }
-        return null;
+        return LineSelection.findPending(words, wordsFound, word);
     }
 
     /**
@@ -504,8 +371,8 @@ public class WordsFrame extends JFrame {
             buttons[p.x][p.y].setForeground(Color.BLACK);
         }
         if (found != null) {
-            wordsFound.add(found.texto); // una sola entrada por palabra, para poder compararla con words.size()
-            found.label.setText(found.texto);
+            wordsFound.add(found.text); // una sola entrada por palabra, para poder compararla con words.size()
+            found.label.setText(found.text);
             found.label.setForeground(Color.GREEN.darker());
         }
         selection.clear();
@@ -539,14 +406,14 @@ public class WordsFrame extends JFrame {
 
         for (int i = 0; i < GRID_SIZE; i++) {
             for (int j = 0; j < GRID_SIZE; j++) {
-                buttons[i][j].setText(String.valueOf(grid[i][j]));
+                buttons[i][j].setText(String.valueOf(grid.get(i, j)));
                 buttons[i][j].setBackground(Color.WHITE);
                 buttons[i][j].setForeground(Color.BLACK);
             }
         }
 
         for (WordDto p : words) {
-            p.label.setText(p.texto);
+            p.label.setText(p.text);
             p.label.setForeground(Color.BLACK);
         }
     }
@@ -570,25 +437,22 @@ public class WordsFrame extends JFrame {
         int result = fileChooser.showOpenDialog(this);
 
         if (result == JFileChooser.APPROVE_OPTION) {
-            File archivo = fileChooser.getSelectedFile();
-            loadWordsFromFile(archivo.getAbsolutePath());
+            File file = fileChooser.getSelectedFile();
+            loadWordsFromFile(file.getAbsolutePath());
         }
     }
 
     /**
      * Carga las palabras del archivo y genera una sopa nueva.
-     * @param rutaArchivo ruta del archivo .txt
+     * @param filePath ruta del archivo .txt
      */
-    private void loadWordsFromFile(String rutaArchivo) {
+    private void loadWordsFromFile(String filePath) {
         try {
-            List<String> lines = Files.readAllLines(Paths.get(rutaArchivo), StandardCharsets.UTF_8);
+            List<String> lines = Files.readAllLines(Paths.get(filePath), StandardCharsets.UTF_8);
             List<WordDto> newWords = new ArrayList<>();
 
-            for (String line : lines) {
-                line = line.trim().toUpperCase().replaceAll("\\s+", ""); // sin espacios: se confundirían con celdas vacías
-                if (!line.isEmpty() && !line.startsWith("#")) {
-                    newWords.add(new WordDto(line));
-                }
+            for (String line : WordListParser.parse(lines)) {
+                newWords.add(new WordDto(line));
             }
 
             if (newWords.isEmpty()) {
@@ -602,12 +466,12 @@ public class WordsFrame extends JFrame {
             lblPunctuation.setText(LABEL_SCORE);
 
             wordsPanel.removeAll();
-            for (WordDto palabra : words) {
-                JLabel lblPalabra = new JLabel(palabra.texto);
-                lblPalabra.setFont(new Font(FONT_ARIAL, Font.PLAIN, 14));
-                lblPalabra.setBorder(BorderFactory.createEmptyBorder(3, 3, 3, 3));
-                palabra.label = lblPalabra;
-                wordsPanel.add(lblPalabra);
+            for (WordDto word : words) {
+                JLabel lblWord = new JLabel(word.text);
+                lblWord.setFont(new Font(FONT_ARIAL, Font.PLAIN, 14));
+                lblWord.setBorder(BorderFactory.createEmptyBorder(3, 3, 3, 3));
+                word.label = lblWord;
+                wordsPanel.add(lblWord);
             }
             wordsPanel.revalidate();
             wordsPanel.repaint();
@@ -616,7 +480,7 @@ public class WordsFrame extends JFrame {
 
             for (int i = 0; i < GRID_SIZE; i++) {
                 for (int j = 0; j < GRID_SIZE; j++) {
-                    buttons[i][j].setText(String.valueOf(grid[i][j]));
+                    buttons[i][j].setText(String.valueOf(grid.get(i, j)));
                     buttons[i][j].setBackground(Color.WHITE);
                     buttons[i][j].setForeground(Color.BLACK);
                 }

@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.juniverse.word.dto;
 
 import java.awt.Point;
@@ -15,15 +11,15 @@ import javax.swing.JLabel;
  */
 public class WordDto {
 
-    public String texto;
-    public List<Point> posiciones;
+    public String text;
+    public List<Point> positions;
     public JLabel label;
 
     /**
      * Crea la palabra.
      * @param texto palabra en mayúsculas
      */
-    public WordDto(String texto) {
-        this.texto = texto;
+    public WordDto(String text) {
+        this.text = text;
     }
 }

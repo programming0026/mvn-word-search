@@ -33,6 +33,26 @@ mvn compile exec:java
 - `palabras.txt` se lee del classpath (carpeta `resources`), así que el juego funciona igual desde cualquier carpeta y desde el fat jar. Para cambiar la lista por defecto edita ese archivo y vuelve a compilar; para una lista puntual usa el menú *Load Words*.
 - Las palabras más largas que la cuadrícula (15 letras) o que no consigan colocarse se descartan.
 
+## Estructura
+
+```text
+src/main/java/com/juniverse/word/
+├── Main.java
+├── model/
+│   ├── WordSearchGrid.java  # genera la sopa: coloca las palabras y rellena con letras
+│   ├── LineSelection.java   # selección en línea recta y búsqueda de la palabra elegida
+│   └── WordListParser.java  # interpreta el archivo de palabras
+├── dto/WordDto.java
+├── gui/                     # WordsFrame (ventana) y AboutDialog
+└── util/                    # fechas, iconos y mensajes
+```
+
+## Pruebas
+
+```bash
+mvn test
+```
+
 ## Licencia
 
 Código de ejemplo de uso libre con fines educativos.

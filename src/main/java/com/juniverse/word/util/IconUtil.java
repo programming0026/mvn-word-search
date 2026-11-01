@@ -7,19 +7,13 @@ import java.util.logging.Logger;
 import javax.swing.ImageIcon;
 
 /**
- * The Class IconUtil.
- *
  * @author ajuar
  */
 public final class IconUtil {
     
-    /** The Constant log. */
     private static final Logger log
             = Logger.getLogger(IconUtil.class.getName());
     
-    /**
-     * Instantiates a new icon util.
-     */
     private IconUtil() {
         
     }
@@ -64,9 +58,9 @@ public final class IconUtil {
     /**
      * Redimensiona un ImageIcon.
      *
-     * @param icon The icon
-     * @param width The width
-     * @param height The height
+     * @param icon icono
+     * @param width ancho
+     * @param height alto
      * @return ImageIcon
      */
     public static ImageIcon resizeIcon(ImageIcon icon, int width, int height) {
