@@ -7,7 +7,7 @@ import java.util.logging.Logger;
 import javax.swing.ImageIcon;
 
 /**
- * @author ajuar
+ * @author Java Universe
  */
 public final class IconUtil {
     

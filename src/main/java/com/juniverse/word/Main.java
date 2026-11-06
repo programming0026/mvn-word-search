@@ -9,7 +9,7 @@ import javax.swing.SwingUtilities;
 /**
  * Punto de entrada del juego Sopa de Letras.
  *
- * @author ajuar
+ * @author Java Universe
  */
 public class Main extends JFrame {
 

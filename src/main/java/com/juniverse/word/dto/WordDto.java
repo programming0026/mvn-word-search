@@ -7,7 +7,7 @@ import javax.swing.JLabel;
 /**
  * Palabra de la sopa de letras: su texto, las celdas que ocupa y su etiqueta en el panel de palabras.
  *
- * @author ajuar
+ * @author Java Universe
  */
 public class WordDto {
 

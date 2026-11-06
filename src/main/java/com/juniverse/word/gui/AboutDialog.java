@@ -34,7 +34,7 @@ import javax.swing.KeyStroke;
 import javax.swing.border.EmptyBorder;
 
 /**
- * @author ajuar
+ * @author Java Universe
  */
 public class AboutDialog extends JDialog {
 

@@ -55,7 +55,7 @@ import javax.swing.UIManager;
  * Ventana del juego Sopa de Letras de 15x15: genera la cuadrícula con las palabras en las ocho direcciones,
  * permite seleccionar arrastrando el ratón, lleva la puntuación y permite cargar listas de palabras.
  *
- * @author ajuar
+ * @author Java Universe
  */
 public class WordsFrame extends JFrame {
 
